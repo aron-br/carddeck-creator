@@ -1,0 +1,104 @@
+body {
+  background: rgb(204,204,204);
+}
+
+page {
+  background: white;
+  display: block;
+  margin: 0 auto;
+  margin-bottom: 0.5cm;
+  box-shadow: 0 0 0.5cm rgba(0,0,0,0.5);
+  width: 21cm;
+  height: 29.7cm;
+  overflow: hidden;
+  position: relative;
+  padding: 18mm 4mm;
+}
+
+.cardCell {
+  width: 63mm;
+  height: 88mm;
+  border: 1px solid black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 5mm; /* Spacing between text fields */
+  position: relative; /* Needed for absolute positioning of children */
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-rows: repeat(3, 88mm);
+  grid-template-columns: repeat(3, 63mm);
+  gap: 10mm;
+  justify-content: center;
+  align-content: center;
+  height: 100%;
+}
+
+.textField {
+  width: 80%; /* Adjust the width as needed */
+  height: 20mm; /* Adjust the height as needed */
+  border: 1px solid #ccc;
+  text-align: center;
+  font-size: 16px;
+  padding: 5px;
+}
+
+.smallTextField {
+  position: absolute;
+  bottom: 0mm; /* Distance from the bottom of the card */
+  right: 0mm; /* Distance from the right side of the card */
+  width: 30mm; /* Adjust the width as needed */
+  height: 10mm; /* Adjust the height as needed */
+  border: 1px solid #ccc;
+  text-align: center;
+  font-size: 12px; /* Adjust font size as needed */
+  padding: 2px;
+}
+
+.back .cardBackImage {
+  width: 88mm; /* Width of the card */
+  height: 63mm; /* Height of the card */
+  transform: rotate(90deg); /* Rotate the image if needed */
+  object-fit: contain; /* Scale the image to fit the field */
+}
+
+@media print {
+  body {
+      background: white;
+      margin: 0;
+      padding: 0;
+      color: black;
+      box-shadow: none;
+  }
+
+  page {
+    background: white;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .page-break {
+    page-break-before: always; /* Insert page breaks where necessary */
+  }
+
+  .cardGrid {
+      grid-template-columns: repeat(3, 63mm);
+      gap: 5mm;
+  }
+
+  .cardCell {
+      margin-bottom: 5mm;
+  }
+
+  .cardBackImage {
+      /* Ensure images are sized correctly for print */
+      width: auto;
+      height: auto;
+  }
+
+  /* Additional print styles as needed */
+}
