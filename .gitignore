@@ -162,3 +162,4 @@ cython_debug/
 # custom stuff
 results/*
 .DS_Store
+*.html
