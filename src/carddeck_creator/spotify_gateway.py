@@ -5,7 +5,7 @@ __author__      = 'Aron Brüggmann'
 __copyright__   = 'Copyright 2023, Aron Brüggmann'
 
 '''
-spotify_connector.py: Implements a custom class that uses the spotify api to query songs and song metadata from a public spotify playlist.
+spotify_gateway.py: Implements a custom class that uses the spotify api to query songs and song metadata from a public spotify playlist.
 
 It builds on top of the spotipy library and requires a custom spotify application (check out https://developer.spotify.com/documentation/web-api/concepts/apps
 if you don't have an app already) with a client ID and client secret as well as the ID of the public spotify playlist you want to download.

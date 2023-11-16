@@ -291,7 +291,8 @@ SONG_TO_YEAR = {'das ist berlin': 1978,
                 'geklont': 2001,
                 'personal jesus': 1990,
                 'house of the rising sun': 1964,
-                'jump': 1984}
+                'jump': 1984,
+                'bohemian rhapsody': 1975}
 
 
 def print_progress_bar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):

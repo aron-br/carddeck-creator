@@ -10,6 +10,7 @@ main.py: Run this script to create an instance of SpotifyGateway and query metad
 
 import os
 from spotify_gateway import SpotifyGateway
+from carddeck import CardDeck
 from settings import *
 from utils import *
 
@@ -68,3 +69,28 @@ summary = summarize_dataframe(df=playlist)
 
 # print summary to console
 print(f"{summary['info']}\n{summary['number_of_songs_by_epoch']}\n{summary['number_of_songs_by_contributor']}")
+
+# ------------------------- CREATION OF CARD DECK -------------------------
+# specify path to the jinja template
+card_template = os.path.join(os.getcwd(), 'src/carddeck_creator/static/templates/card_template_A4.jinja')
+
+# specify the name of customizable fields in the template
+template_fields=['text1', 'text2', 'text3', 'smallText', 'number', 'backImage']
+
+# which column should be used to fill the template fields !ORDER MATTERS!
+# content_columns[0] is written in field with name template_field[0]
+# content_columns[1] is written in field with name template_field[1], etc.
+content_columns=['song', 'original_release_year', 'artist', 'contributor_name', 'number', 'code_file']
+
+# define the batch size (how many cards fit on one page of template)
+batch_size = 9
+
+# create a CardDeck instance
+card_deck = CardDeck(data=playlist,
+                    content_columns=content_columns,
+                    card_template=card_template,
+                    batch_size=batch_size,
+                    template_fields=template_fields)
+
+# create a printable html file that contains the custom playing cards
+card_deck.create_cards(filename='./cards.html')

@@ -1,5 +1,6 @@
 body {
   background: rgb(204,204,204);
+  font-family: 'Veranda', sans-serif;
 }
 
 page {
@@ -18,7 +19,8 @@ page {
 .cardCell {
   width: 63mm;
   height: 88mm;
-  border: 1px solid black;
+  border: 3px solid black;
+  background: transparent;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -38,23 +40,38 @@ page {
 }
 
 .textField {
-  width: 80%; /* Adjust the width as needed */
+  width: 95%; /* Adjust the width as needed */
   height: 20mm; /* Adjust the height as needed */
-  border: 1px solid #ccc;
+  border: none;
+  background: transparent;
   text-align: center;
-  font-size: 16px;
+  font-size: 11px;
   padding: 5px;
 }
 
 .smallTextField {
   position: absolute;
-  bottom: 0mm; /* Distance from the bottom of the card */
-  right: 0mm; /* Distance from the right side of the card */
-  width: 30mm; /* Adjust the width as needed */
-  height: 10mm; /* Adjust the height as needed */
-  border: 1px solid #ccc;
-  text-align: center;
-  font-size: 12px; /* Adjust font size as needed */
+  bottom: 1mm; /* Distance from the bottom of the card */
+  right: 1mm; /* Distance from the right side of the card */
+  width: 13mm; /* Adjust the width as needed */
+  height: 5mm; /* Adjust the height as needed */
+  border: none;
+  background: transparent;
+  text-align: right;
+  font-size: 11px; /* Adjust font size as needed */
+  padding: 2px;
+}
+
+.numberField {
+  position: absolute;
+  bottom: 1mm; /* Distance from the bottom of the card */
+  left: 1mm; /* Distance from the right side of the card */
+  width: 10mm; /* Adjust the width as needed */
+  height: 5mm; /* Adjust the height as needed */
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 11px; /* Adjust font size as needed */
   padding: 2px;
 }
 

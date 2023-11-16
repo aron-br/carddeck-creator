@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="/Users/aronrogmann/PythonProjects/carddeck-creator/src/carddeck_creator/static/styles/styles.css">
+</head>
+<body>
+    {% for batch in batches %}
+    <!-- Front of Cards -->
+    <page size="A4">
+        <div class="cardGrid">
+            {% for card in batch %}
+                <div class="cardCell">
+                    <input type="text" class="textField" placeholder="Text Field 1" value="{{ card.text1 }}">
+                    <input type="text" class="textField" placeholder="Text Field 2" style="font-size: 40px; font-weight: bold" value="{{ card.text2 }}">
+                    <input type="text" class="textField" placeholder="Text Field 3" value="{{ card.text3 }}">
+                    <input type="text" class="smallTextField" placeholder="Small Text" value="{{ card.smallText }}">
+                    <input type="text" class="numberField" placeholder="No." value="{{ card.number }}">
+                </div>
+            {% endfor %}
+        </div>
+    </page>
+
+    <!-- Back of Cards -->
+    <page size="A4">
+    <div class="cardGrid">
+        {% for card in batch %}
+            <div class="cardCell back">
+                <img src="{{ card.backImage }}" alt="Card Back" class="cardBackImage">
+            </div>
+        {% endfor %}
+    </div>
+</page>
+{% endfor %}
+</body>
+</html>
