@@ -53,6 +53,14 @@ class CardDeck():
                 card_batch.append(card_content)
 
             batches.append(card_batch)
+        
+        if len(batches[-1]) < self.batch_size:
+            empty_card_content = {}
+            for i, field in enumerate(self.template_fields):
+                empty_card_content[field] = ''
+
+            for _ in range(self.batch_size-len(batches[-1])):
+                batches[-1].append(empty_card_content)
 
         self.batches = batches
 
@@ -81,7 +89,7 @@ class CardDeck():
 
 if __name__ == '__main__':
     data = pd.read_csv('/Users/aronrogmann/PythonProjects/carddeck-creator/results/datasets/playlist_processed.csv')
-    card_template = os.path.join(os.getcwd(), 'src/carddeck_creator/static/templates/card_template_A4.jinja')
+    card_template = os.path.join(os.getcwd(), 'src/carddeck_creator/static/templates/card_template_A4_v2.jinja')
 
     card_deck = CardDeck(data=data,
                          content_columns=['song', 'original_release_year', 'artist', 'contributor_name', 'number', 'code_file'],
@@ -89,6 +97,6 @@ if __name__ == '__main__':
                          batch_size=9,
                          template_fields=['text1', 'text2', 'text3', 'smallText', 'number', 'backImage'])
     
-    card_deck.create_cards(filename='./cards.html')
+    card_deck.create_cards(filename='./cards_v2.html')
 
     print('Done')
