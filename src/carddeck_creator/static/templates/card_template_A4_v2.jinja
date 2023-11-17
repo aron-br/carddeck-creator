@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" type="text/css" href="/Users/aronrogmann/PythonProjects/carddeck-creator/src/carddeck_creator/static/styles/styles.css">
+</head>
+<body>
+    {% for batch in batches %}
+    <!-- Front of Cards -->
+    <page size="A4">
+        <div class="cardGrid">
+            {% for card in batch %}
+                <div class="cardCell">
+                    <input type="text" class="textField" placeholder="Text Field 1" value="{{ card.text1 }}">
+                    <input type="text" class="textField" placeholder="Text Field 2" style="font-size: 40px; font-weight: bold" value="{{ card.text2 }}">
+                    <input type="text" class="textField" placeholder="Text Field 3" value="{{ card.text3 }}">
+                    <input type="text" class="smallTextField" placeholder="Small Text" value="{{ card.smallText }}">
+                    <input type="text" class="numberField" placeholder="No." value="{{ card.number }}">
+                </div>
+            {% endfor %}
+        </div>
+    </page>
+
+    <!-- Back of Cards -->
+    <page size="A4">
+    <div class="cardGrid">
+        <div class="cardCell back">
+            <img src="{{ batch[2].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[1].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[0].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[5].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[4].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[3].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[8].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[7].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+        <div class="cardCell back">
+            <img src="{{ batch[6].backImage }}" alt="Card Back" class="cardBackImage">
+        </div>
+    </div>
+</page>
+{% endfor %}
+</body>
+</html>
