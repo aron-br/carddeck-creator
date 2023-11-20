@@ -214,7 +214,7 @@ def summarize_dataframe(df:pd.DataFrame) -> dict:
     n_songs_by_contributor = '\n---------------------- NUMBER OF SONGS BY CONTRIBUTOR ----------------------'
     for name in df['contributor_name'].unique():
         n_songs = len(df[df['contributor_name']==name])
-        n_songs_by_contributor= f'{n_songs_by_contributor}\nSongs from the {name}: {n_songs}'
+        n_songs_by_contributor= f'{n_songs_by_contributor}\nSongs added by {name}: {n_songs}'
 
     n_songs_by_contributor = f'{n_songs_by_contributor}\n'
 
@@ -235,7 +235,8 @@ ID_TO_NAME = {'Maria': 'Maria',
               'lamoniver': 'Ramona',
               'rexgameboy': 'Finn',
               '31ejeyo5wk7nxsbbmthdldqzaaje': 'Najua',
-              'Josi': 'Josi'}
+              'Josi': 'Josi',
+              '1159201130': 'Camilla'}
 
 SONG_TO_CONTRIBUTOR = {'Norwegian Wood (This Bird Has Flown) - Remastered 2009': 'Maria',
      'Hotel California': 'Maria',
