@@ -19,3 +19,11 @@ source ~/.bash_profile
 echo $SPOTIPY_CLIENT_ID
 echo $SPOTIPY_CLIENT_SECRET
 ```
+
+Update the path to the styles.css file in the .jinja template
+```
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" type="text/css" href="<ABSOLUTE-PATH-TO>/styles.css">
+</head>
+```
