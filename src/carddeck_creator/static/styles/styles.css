@@ -19,7 +19,7 @@ page {
 .cardCell {
   width: 63mm;
   height: 88mm;
-  border: 3px solid black;
+  border: 1px dashed black;
   background: transparent;
   display: flex;
   justify-content: center;
@@ -33,7 +33,7 @@ page {
   display: grid;
   grid-template-rows: repeat(3, 88mm);
   grid-template-columns: repeat(3, 63mm);
-  gap: 1.7mm;
+  gap: 0mm;
   justify-content: center;
   align-content: center;
   height: 100%;
@@ -104,7 +104,7 @@ page {
 
   .cardGrid {
       grid-template-columns: repeat(3, 63mm);
-      gap: 1.7mm;
+      gap: 0mm;
   }
 
   .cardCell {
