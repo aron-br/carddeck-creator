@@ -33,7 +33,7 @@ page {
   display: grid;
   grid-template-rows: repeat(3, 88mm);
   grid-template-columns: repeat(3, 63mm);
-  gap: 10mm;
+  gap: 1.7mm;
   justify-content: center;
   align-content: center;
   height: 100%;
@@ -104,7 +104,7 @@ page {
 
   .cardGrid {
       grid-template-columns: repeat(3, 63mm);
-      gap: 5mm;
+      gap: 1.7mm;
   }
 
   .cardCell {
