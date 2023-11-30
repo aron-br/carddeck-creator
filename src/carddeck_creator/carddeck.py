@@ -97,6 +97,6 @@ if __name__ == '__main__':
                          batch_size=9,
                          template_fields=['text1', 'text2', 'text3', 'smallText', 'number', 'backImage'])
     
-    card_deck.create_cards(filename='./cards_v2.html')
+    card_deck.create_cards(filename='./cards.html')
 
     print('Done')

@@ -236,7 +236,9 @@ ID_TO_NAME = {'Maria': 'Maria',
               'rexgameboy': 'Finn',
               '31ejeyo5wk7nxsbbmthdldqzaaje': 'Najua',
               'Josi': 'Josi',
-              '1159201130': 'Camilla'}
+              '1159201130': 'Camilla',
+              'paula.rulff': 'Hanna',
+              'beate.brueggmann': 'Beate'}
 
 SONG_TO_CONTRIBUTOR = {'Norwegian Wood (This Bird Has Flown) - Remastered 2009': 'Maria',
      'Hotel California': 'Maria',
@@ -270,7 +272,8 @@ SONG_TO_CONTRIBUTOR = {'Norwegian Wood (This Bird Has Flown) - Remastered 2009':
      'As I Lay Me Down': 'Josi',
      'Losing My Religion': 'Josi',
      'Come On Eileen': 'Josi',
-     'Living Next Door to Alice': 'Josi'
+     'Living Next Door to Alice': 'Josi',
+     'Bad Moon Rising': 'nina.brueggmann'
      }
 
 SONG_TO_YEAR = {'das ist berlin': 1978,
@@ -293,7 +296,9 @@ SONG_TO_YEAR = {'das ist berlin': 1978,
                 'personal jesus': 1990,
                 'house of the rising sun': 1964,
                 'jump': 1984,
-                'bohemian rhapsody': 1975}
+                'bohemian rhapsody': 1975,
+                'das bisschen haushalt... sagt mein mann': 1977
+                }
 
 
 def print_progress_bar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):

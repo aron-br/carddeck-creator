@@ -31,20 +31,23 @@ spotify_gateway.get_playlist_metadata()
 spotify_gateway.playlist.to_csv(os.path.join(DATA_FOLDER, 'playlist.csv'), index=False)
 
 # ------------------------- POSTPROCESSING !CUSTOMIZE THIS TO YOUR NEEDS! -------------------------
+skip_postprocessing=False
+
 # create a copy of the playlist dataset before modifying it
 playlist = spotify_gateway.playlist.copy()
 
-# modify the contributors of certain songs (ONLY NECESSARY IF ORIGINAL CONTRIBUTOR DIFFERS FROM CONTRIBUTOR DISPLAYED IN SPOTIFY)
-playlist = modify_song_contributor_id(playlist=playlist,
-                                      replace_dict=SONG_TO_CONTRIBUTOR,
-                                      column='song',
-                                      modify_column='contributor_id')
+if not skip_postprocessing:
+    # modify the contributors of certain songs (ONLY NECESSARY IF ORIGINAL CONTRIBUTOR DIFFERS FROM CONTRIBUTOR DISPLAYED IN SPOTIFY)
+    playlist = modify_song_contributor_id(playlist=playlist,
+                                        replace_dict=SONG_TO_CONTRIBUTOR,
+                                        column='song',
+                                        modify_column='contributor_id')
 
-# add column with contributor names to dataframe
-playlist = add_contributor_names(playlist=playlist,
-                                 replace_dict=ID_TO_NAME,
-                                 column='contributor_id',
-                                 append_column='contributor_name')
+    # add column with contributor names to dataframe
+    playlist = add_contributor_names(playlist=playlist,
+                                    replace_dict=ID_TO_NAME,
+                                    column='contributor_id',
+                                    append_column='contributor_name')
 
 # extract release year from release date strings
 playlist = extract_release_year(playlist=playlist,
@@ -53,10 +56,10 @@ playlist = extract_release_year(playlist=playlist,
 
 # modify release years (necessary for songs that are remastered -> I want the original release year)
 playlist = modify_release_year(playlist=playlist,
-                               replace_dict=SONG_TO_YEAR,
-                               release_year_column='release_year',
-                               song_column='song',
-                               append_column='original_release_year')
+                            replace_dict=SONG_TO_YEAR,
+                            release_year_column='release_year',
+                            song_column='song',
+                            append_column='original_release_year')
 
 # add column with epoch to dataframe
 playlist['epoch'] = [find_epoch(year=year) for year in playlist['original_release_year']]
@@ -64,23 +67,24 @@ playlist['epoch'] = [find_epoch(year=year) for year in playlist['original_releas
 # save datafame as csv
 playlist.to_csv(os.path.join(DATA_FOLDER, 'playlist_processed.csv'), index=False)
 
-# get some stats about the dataframe
-summary = summarize_dataframe(df=playlist)
+if not skip_postprocessing:
+    # get some stats about the dataframe
+    summary = summarize_dataframe(df=playlist)
 
-# print summary to console
-print(f"{summary['info']}\n{summary['number_of_songs_by_epoch']}\n{summary['number_of_songs_by_contributor']}")
+    # print summary to console
+    print(f"{summary['info']}\n{summary['number_of_songs_by_epoch']}\n{summary['number_of_songs_by_contributor']}")
 
 # ------------------------- CREATION OF CARD DECK -------------------------
 # specify path to the jinja template
 card_template = os.path.join(os.getcwd(), 'src/carddeck_creator/static/templates/card_template_A4.jinja')
 
 # specify the name of customizable fields in the template
-template_fields=['text1', 'text2', 'text3', 'smallText', 'number', 'backImage']
+template_fields=  ['text1', 'text2', 'text3', 'smallText', 'number', 'backImage']
 
 # which column should be used to fill the template fields !ORDER MATTERS!
 # content_columns[0] is written in field with name template_field[0]
 # content_columns[1] is written in field with name template_field[1], etc.
-content_columns=['song', 'original_release_year', 'artist', 'contributor_name', 'number', 'code_file']
+content_columns= ['song', 'original_release_year', 'artist', 'contributor_name', 'number', 'code_file']
 
 # define the batch size (how many cards fit on one page of template)
 batch_size = 9

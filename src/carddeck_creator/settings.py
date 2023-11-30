@@ -13,6 +13,7 @@ Project specific settings can to be adapted for your project. The fixed settings
 '''
 # ------------------------- PROJECT SPECIFIC SETTINGS !CAN BE MODIFIED! -------------------------
 # Define spotify playlist ID (replace by your PLAYLIST-ID)
+# Christmas Playlist: 3oxaXCM8yo5qZrGkhsOAEG
 PLAYLIST_ID = '0QoUa07l09WLh0ZTxBvgX4'
 
 # Define a directory, where all results are saved to (DEFAULT: './results/')
