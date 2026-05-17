@@ -163,3 +163,4 @@ cython_debug/
 results/*
 .DS_Store
 *.html
+*.pdf
