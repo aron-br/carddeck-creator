@@ -14,6 +14,19 @@ from carddeck import CardDeck
 from settings import *
 from utils import *
 
+# ------------------------- Filenames etc. -------------------------
+# define a general filename for all generated files
+filename = "./hitster_birthday_edition"
+
+# define a name for the CSV file that will contain the playing cards
+playlist_filename = filename + ".csv"
+
+#  define a name for the HTML file that will contain the playing cards
+html_filename = filename + ".html"
+
+# define a name for the summary file that contains some key numbers and facts
+summary_filename = filename + "_summary.pdf"
+
 # ------------------------- SET UP PROJECT STRUCTURE !DO NOT MODIFY! -------------------------
 # create project structure if it does not exist already
 for folder in FOLDERS:
@@ -52,27 +65,40 @@ if not skip_postprocessing:
 # extract release year from release date strings
 playlist = extract_release_year(playlist=playlist,
                                 column='release_date',
-                                append_column='release_year')
+                                append_column='release_year_raw')
 
-# modify release years (necessary for songs that are remastered -> I want the original release year)
-playlist = modify_release_year(playlist=playlist,
-                            replace_dict=SONG_TO_YEAR,
-                            release_year_column='release_year',
-                            song_column='song',
-                            append_column='original_release_year')
+# preserve raw spotify release year before validation
+playlist["release_year"] = playlist["release_year_raw"].copy()
+
+
+playlist, change_log = validate_and_fix_release_years(
+    playlist=playlist,
+    spotify_gateway=spotify_gateway,
+    overwrite=True
+)
+
+pd.DataFrame(change_log).to_csv(
+    os.path.join(DATA_FOLDER, "year_changes.csv"),
+    index=False
+)
 
 # add column with epoch to dataframe
-playlist['epoch'] = [find_epoch(year=year) for year in playlist['original_release_year']]
+playlist['epoch'] = [find_epoch(year=year) for year in playlist['release_year']]
 
 # save datafame as csv
-playlist.to_csv(os.path.join(DATA_FOLDER, 'playlist_processed.csv'), index=False)
+playlist.to_csv(os.path.join(DATA_FOLDER, playlist_filename), index=False)
 
 if not skip_postprocessing:
     # get some stats about the dataframe
-    summary = summarize_dataframe(df=playlist)
+    summary = summarize_dataframe(df=playlist, export_pdf=True, pdf_filename=summary_filename)
 
     # print summary to console
-    print(f"{summary['info']}\n{summary['number_of_songs_by_epoch']}\n{summary['number_of_songs_by_contributor']}")
+    print("\nDATASET SUMMARY")
+    print(f"Songs: {summary['songs']}")
+    print(f"Artists: {summary['artists']}")
+    print(f"Contributors: {summary['contributors']}")
+    print(f"Oldest Release Year: {summary['oldest_release_year']}")
+    print(f"Latest Release Year: {summary['latest_release_year']}")
 
 # ------------------------- CREATION OF CARD DECK -------------------------
 # specify path to the jinja template
@@ -84,7 +110,7 @@ template_fields=  ['text1', 'text2', 'text3', 'smallText', 'number', 'backImage'
 # which column should be used to fill the template fields !ORDER MATTERS!
 # content_columns[0] is written in field with name template_field[0]
 # content_columns[1] is written in field with name template_field[1], etc.
-content_columns= ['song', 'original_release_year', 'artist', 'contributor_name', 'number', 'code_file']
+content_columns= ['song', 'release_year', 'artist', 'contributor_name', 'number', 'code_file']
 
 # define the batch size (how many cards fit on one page of template)
 batch_size = 9
@@ -97,4 +123,4 @@ card_deck = CardDeck(data=playlist,
                     template_fields=template_fields)
 
 # create a printable html file that contains the custom playing cards
-card_deck.create_cards(filename='./cards.html')
+card_deck.create_cards(filename=html_filename)

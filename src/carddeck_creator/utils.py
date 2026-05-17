@@ -8,9 +8,118 @@ __copyright__   = "Copyright 2023"
 utils.py: Some utility functions used in this project
 """
 
+import os
 import pandas as pd
 import urllib.request
 from datetime import datetime
+from fpdf import FPDF
+import matplotlib.pyplot as plt
+import musicbrainzngs
+from functools import lru_cache
+import re
+
+musicbrainzngs.set_useragent(
+    "carddeck-creator",
+    "1.0",
+    "your-email@example.com"
+)
+
+def normalize(text: str) -> str:
+    if not isinstance(text, str):
+        return ""
+    return re.sub(r"\s+", " ", text.lower()).replace("&", "and").strip()
+
+def extract_spotify_year(track_meta: dict):
+    if not track_meta:
+        return None
+
+    date = track_meta.get("album", {}).get("release_date")
+
+    if not date:
+        return None
+
+    try:
+        year = int(date[:4])
+    except:
+        return None
+
+    # Spotify often returns remaster years → filter heuristic
+    album_name = track_meta.get("album", {}).get("name", "").lower()
+
+    if any(x in album_name for x in [
+        "remaster", "deluxe", "anniversary", "edition"
+    ]):
+        return None  # ignore unreliable Spotify year
+
+    return year
+
+
+@lru_cache(maxsize=1000)
+def get_musicbrainz_year(song: str, artist: str):
+    try:
+        result = musicbrainzngs.search_recordings(
+            recording=song,
+            artist=artist,
+            limit=3
+        )
+
+        recordings = result.get("recording-list", [])
+
+        candidates = []
+
+        for r in recordings:
+            releases = r.get("release-list", [])
+
+            for rel in releases:
+                title = rel.get("title", "").lower()
+                date = rel.get("date")
+
+                if not date:
+                    continue
+
+                year = int(date[:4])
+
+                # strongly penalize reissues
+                penalty = 0
+
+                if any(x in title for x in [
+                    "remaster", "remastered", "reissue", "deluxe", "anniversary", "edition"
+                ]):
+                    penalty = 1000  # push these far down
+
+                candidates.append((year + penalty, year))
+
+        if not candidates:
+            return None
+
+        # choose smallest adjusted score, return real year
+        best = min(candidates, key=lambda x: x[0])[1]
+
+        return best
+
+    except Exception:
+        return None
+    
+
+def choose_best_year(spotify_year, mb_year, old_year):
+    """
+    Strong bias toward earliest plausible year.
+    """
+
+    candidates = [y for y in [spotify_year, mb_year, old_year] if y is not None]
+
+    if not candidates:
+        return None
+
+    return min(candidates)
+
+
+def get_correct_release_year(song, artist, spotify_meta, old_year):
+    spotify_year = extract_spotify_year(spotify_meta)
+
+    mb_year = get_musicbrainz_year(song, artist)
+
+    return choose_best_year(spotify_year, mb_year, old_year)
 
 
 def __create_spotify_code_url(uri:str, code_color_as_text:str = 'black', background_color_as_hex:str = 'FFFFFF', format:str = 'png', size:int = 1024) -> str:
@@ -57,7 +166,7 @@ def find_epoch(year:int) -> str:
         epoch = '60er'
     elif year > 1949:
         epoch = '50er'
-    elif year < 1949:
+    elif year <= 1949:
         epoch = 'Oldies'
     
     return epoch
@@ -181,47 +290,386 @@ def modify_release_year(playlist:pd.DataFrame, replace_dict:dict, release_year_c
     return playlist_copy
 
 
-def summarize_dataframe(df:pd.DataFrame) -> dict:
-    '''Create a comprehensive summary of a pandas Dataframe'''
-    keys = df.columns.to_list()
+def validate_and_fix_release_years(
+        playlist: pd.DataFrame,
+        spotify_gateway,
+        song_column: str = "song",
+        artist_column: str = "artist",
+        overwrite: bool = True
+) -> pd.DataFrame:
 
-    summary = {key:len(df[key].unique()) for key in keys}
+    playlist_copy = playlist.copy()
 
-    summary['info'] = f'\n---------------------- SUMMARY ----------------------\nSongs: {summary['song']}\nArtists: {summary['artist']}\nContributors: {summary['contributor_name']} {df['contributor_name'].unique()}\nEpochs: {summary['epoch']} {df['epoch'].unique()}\n-----------------------------------------------------\n'
+    corrected_years = []
+    change_log = []
 
-    n = 0
-    n_songs_by_epoch = '\n---------------------- NUMBER OF SONGS BY EPOCH ----------------------'
-    for epoch in df['epoch'].unique():
-        n_songs = len(df[df['epoch']==epoch])
-        n_songs_by_epoch = f'{n_songs_by_epoch}\nSongs from the {epoch}: {n_songs}'
+    total = len(playlist_copy)
 
-        n += n_songs
+    for i, (_, row) in enumerate(playlist_copy.iterrows(), start=1):
 
-    n_songs_by_epoch = f'{n_songs_by_epoch}\nTotal songs: {n}\n'
+        song = row[song_column]
+        artist = row[artist_column]
+        old_year = row.get("release_year_raw")
 
-    summary['number_of_songs_by_epoch'] = n_songs_by_epoch
+        meta = spotify_gateway.get_track_metadata(song, artist)
+
+        new_year = get_correct_release_year(song, artist, meta, old_year)
+
+        # log any changes
+        if old_year != new_year:
+            change_log.append({
+                "song": song,
+                "artist": artist,
+                "old_year": old_year,
+                "new_year": new_year
+            })
+
+        corrected_years.append(new_year)
+
+        print_progress_bar(
+            iteration=i,
+            total=total,
+            prefix="Validating years",
+            suffix=f"{i}/{total}",
+            length=40
+        )
+
+    print()
+
+    # FINAL COLUMN ONLY
+    playlist_copy["release_year"] = corrected_years
+    
+
+    return playlist_copy, change_log
 
 
-    songs_by_epoch = f'\n---------------------- SONGS BY EPOCH ----------------------'
-    for epoch in df['epoch'].unique():
-        songs_by_epoch = f'{songs_by_epoch}\n\n---------------- {epoch} ----------------'
-        songs = df['song'][df['epoch']==epoch].to_list()
-        for song in songs:
-            songs_by_epoch = f'{songs_by_epoch}\n{song}'
+def summarize_dataframe(
+        df: pd.DataFrame,
+        export_pdf: bool = True,
+        pdf_filename: str = "dataframe_summary.pdf"
+):
+    """
+    Create a comprehensive dataframe summary
+    and export a visually enhanced PDF report.
+    """
 
-    summary['songs_by_epoch'] = songs_by_epoch
+    # -------------------------------------------------
+    # CLEAN DATA
+    # -------------------------------------------------
 
-    n_songs_by_contributor = '\n---------------------- NUMBER OF SONGS BY CONTRIBUTOR ----------------------'
-    for name in df['contributor_name'].unique():
-        n_songs = len(df[df['contributor_name']==name])
-        n_songs_by_contributor= f'{n_songs_by_contributor}\nSongs added by {name}: {n_songs}'
+    if 'release_year' in df.columns:
+        df['release_year'] = pd.to_numeric(
+            df['release_year'],
+            errors='coerce'
+        )
 
-    n_songs_by_contributor = f'{n_songs_by_contributor}\n'
+    # -------------------------------------------------
+    # BASIC METRICS
+    # -------------------------------------------------
 
-    summary['number_of_songs_by_contributor'] = n_songs_by_contributor
+    n_songs = len(df)
 
+    n_artists = df['artist'].nunique()
 
-    return summary
+    n_contributors = df['contributor_name'].nunique()
+
+    oldest_year = int(df['release_year'].min())
+
+    latest_year = int(df['release_year'].max())
+
+    # -------------------------------------------------
+    # CHART DATA
+    # -------------------------------------------------
+
+    # define chronological epoch order
+    epoch_order = [
+        'Oldies',
+        '50er',
+        '60er',
+        '70er',
+        '80er',
+        '90er',
+        '2000er',
+        '2010er',
+        '2020er'
+    ]
+
+    # group songs by epoch
+    songs_per_epoch = (
+        df.groupby('epoch')
+        .size()
+    )
+
+    # reorder epochs chronologically
+    songs_per_epoch = songs_per_epoch.reindex(epoch_order).dropna()
+
+    songs_per_contributor = (
+        df.groupby('contributor_name')
+        .size()
+        .sort_values(ascending=False)
+    )
+
+    # -------------------------------------------------
+    # CREATE CHARTS
+    # -------------------------------------------------
+
+    epoch_chart = "songs_by_epoch.png"
+
+    plt.figure(figsize=(8, 5))
+
+    songs_per_epoch.plot(
+        kind='bar',
+        color='skyblue'
+    )
+
+    plt.title("Songs by Epoch")
+
+    plt.xlabel("Epoch")
+
+    plt.ylabel("Number of Songs")
+
+    plt.xticks(rotation=45)
+
+    plt.tight_layout()
+
+    plt.savefig(epoch_chart)
+
+    plt.close()
+
+    contributor_chart = "songs_by_contributor.png"
+
+    plt.figure(figsize=(7, 7))
+
+    songs_per_contributor.plot(
+        kind='pie',
+        autopct='%1.1f%%'
+    )
+
+    plt.ylabel("")
+
+    plt.title("Songs by Contributor")
+
+    plt.tight_layout()
+
+    plt.savefig(contributor_chart)
+
+    plt.close()
+
+    # -------------------------------------------------
+    # CREATE PDF
+    # -------------------------------------------------
+
+    if export_pdf:
+
+        pdf = FPDF()
+
+        pdf.set_auto_page_break(
+            auto=True,
+            margin=15
+        )
+
+        # -------------------------------------------------
+        # TITLE PAGE
+        # -------------------------------------------------
+
+        pdf.add_page()
+
+        pdf.set_font("Arial", "B", 22)
+
+        pdf.cell(
+            0,
+            20,
+            "Music Dataset Summary Report",
+            ln=True,
+            align='C'
+        )
+
+        pdf.ln(10)
+
+        # -------------------------------------------------
+        # OVERVIEW TABLE
+        # -------------------------------------------------
+
+        pdf.set_font("Arial", "B", 14)
+
+        pdf.cell(
+            0,
+            10,
+            "Dataset Overview",
+            ln=True
+        )
+
+        pdf.set_font("Arial", "", 12)
+
+        overview_rows = [
+            ("Songs", n_songs),
+            ("Artists", n_artists),
+            ("Contributors", n_contributors),
+            ("Oldest Release Year", oldest_year),
+            ("Latest Release Year", latest_year)
+        ]
+
+        for label, value in overview_rows:
+
+            pdf.set_font("Arial", "B", 11)
+
+            pdf.cell(70, 8, str(label), border=1)
+
+            pdf.set_font("Arial", "", 11)
+
+            pdf.cell(50, 8, str(value), border=1, ln=True)
+
+        pdf.ln(10)
+
+        # -------------------------------------------------
+        # EPOCH TABLE
+        # -------------------------------------------------
+
+        pdf.set_font("Arial", "B", 14)
+
+        pdf.cell(
+            0,
+            10,
+            "Songs by Epoch",
+            ln=True
+        )
+
+        pdf.set_font("Arial", "B", 11)
+
+        pdf.cell(80, 8, "Epoch", border=1)
+
+        pdf.cell(40, 8, "Songs", border=1, ln=True)
+
+        pdf.set_font("Arial", "", 11)
+
+        for epoch, count in songs_per_epoch.items():
+
+            pdf.cell(80, 8, str(epoch), border=1)
+
+            pdf.cell(40, 8, str(count), border=1, ln=True)
+
+        pdf.ln(10)
+
+        # -------------------------------------------------
+        # ADD BAR CHART
+        # -------------------------------------------------
+
+        pdf.set_font("Arial", "B", 14)
+
+        pdf.cell(
+            0,
+            10,
+            "Songs by Epoch Chart",
+            ln=True
+        )
+
+        pdf.image(
+            epoch_chart,
+            w=170
+        )
+
+        pdf.ln(10)
+
+        # -------------------------------------------------
+        # ADD PIE CHART
+        # -------------------------------------------------
+
+        pdf.set_font("Arial", "B", 14)
+
+        pdf.cell(
+            0,
+            10,
+            "Contributor Distribution",
+            ln=True
+        )
+
+        pdf.image(
+            contributor_chart,
+            w=140
+        )
+
+        pdf.ln(10)
+
+        # -------------------------------------------------
+        # SONG LISTS
+        # -------------------------------------------------
+
+        pdf.add_page()
+
+        pdf.set_font("Arial", "B", 16)
+
+        pdf.cell(
+            0,
+            10,
+            "Songs by Epoch",
+            ln=True
+        )
+
+        for epoch in epoch_order:
+    
+            # skip empty epochs
+            if epoch not in df['epoch'].values:
+                continue
+
+            pdf.ln(5)
+
+            pdf.set_font("Arial", "B", 13)
+
+            pdf.cell(
+                0,
+                8,
+                str(epoch),
+                ln=True
+            )
+
+            pdf.set_font("Arial", "", 11)
+
+            songs = df[df['epoch'] == epoch]['song']
+
+            for song in songs:
+
+                clean_song = str(song).encode(
+                    "latin-1",
+                    "replace"
+                ).decode("latin-1")
+
+                pdf.multi_cell(
+                    0,
+                    6,
+                    f"- {clean_song}"
+                )
+
+        # -------------------------------------------------
+        # EXPORT
+        # -------------------------------------------------
+
+        pdf.output(pdf_filename)
+
+        print(
+            f"\nEnhanced PDF report exported: {pdf_filename}"
+        )
+
+    # -------------------------------------------------
+    # CLEAN TEMP FILES
+    # -------------------------------------------------
+
+    if os.path.exists(epoch_chart):
+        os.remove(epoch_chart)
+
+    if os.path.exists(contributor_chart):
+        os.remove(contributor_chart)
+
+    # -------------------------------------------------
+    # RETURN SUMMARY DICT
+    # -------------------------------------------------
+
+    return {
+        "songs": n_songs,
+        "artists": n_artists,
+        "contributors": n_contributors,
+        "oldest_release_year": oldest_year,
+        "latest_release_year": latest_year
+    }
 
 
 ID_TO_NAME = {'Maria': 'Maria',
@@ -240,65 +688,8 @@ ID_TO_NAME = {'Maria': 'Maria',
               'paula.rulff': 'Hanna',
               'beate.brueggmann': 'Beate'}
 
-SONG_TO_CONTRIBUTOR = {'Norwegian Wood (This Bird Has Flown) - Remastered 2009': 'Maria',
-     'Hotel California': 'Maria',
-     'I Will Survive': 'Maria',
-     'Jump': 'Maria',
-     'Forever Young' : 'Maria',
-     'Blue (Da Ba Dee) - Gabry Ponte Video Edit': 'Maria',
-     'Seven Nation Army': 'Maria',
-     'Greek Tragedy': 'Maria',
-     'Zacharia': 'Maria',
-     'the last great american dynasty': 'Maria',
-     'Willst du': 'Max',
-     'Save The World': 'Max',
-     'Funky Town': 'Max',
-     'Pac-Man Fever': 'Max',
-     'ocean eyes': 'Max',
-     'The Spins': 'Max',
-     'Miami': 'Max',
-     'Anders': 'Max',
-     'Fireflies': 'Max',
-     'KIDS': 'Max',
-     'Bohemian Rapsody - Remastered 2011': 'hofmann.wiebke',
-     'Tiny Dancer': 'nina.brueggmann',
-     'Like a Prayer': 'nina.brueggmann',
-     'The Logical Song - Remastered 2010': 'nina.brueggmann',
-     'Lieben wir': 'Josi',
-     'Fame': 'Josi',
-     'Call Me Maybe': 'Josi',
-     'Can\'t Fight The Moonlight': 'Josi',
-     'She\'s Got That Light': 'Josi',
-     'As I Lay Me Down': 'Josi',
-     'Losing My Religion': 'Josi',
-     'Come On Eileen': 'Josi',
-     'Living Next Door to Alice': 'Josi',
-     'Bad Moon Rising': 'nina.brueggmann'
+SONG_TO_CONTRIBUTOR = {
      }
-
-SONG_TO_YEAR = {'das ist berlin': 1978,
-                'heart of gold': 1972,
-                'intergalactic': 1998,
-                'i\'m every woman': 1978,
-                'funky town': 1979,
-                'pac-man fever': 1982,
-                'lose yourself': 2002,
-                'ain\'t no mountain high enough': 1967,
-                'i want you back': 1969,
-                'billie jean': 1982,
-                'don\'t stop believin\'': 1981,
-                'smoke on the water': 1971,
-                'hypnotize': 1997,
-                'enjoy the silence': 1990,
-                'it\'s a sin': 1987,
-                'stumblin\' in': 1980,
-                'geklont': 2001,
-                'personal jesus': 1990,
-                'house of the rising sun': 1964,
-                'jump': 1984,
-                'bohemian rhapsody': 1975,
-                'das bisschen haushalt... sagt mein mann': 1977
-                }
 
 
 def print_progress_bar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):

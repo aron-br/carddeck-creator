@@ -17,7 +17,7 @@ import pandas as pd
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
-from utils import print_progress_bar, create_spotify_code
+from utils import print_progress_bar, create_spotify_code, normalize
 from settings import IMAGE_FOLDER
 
 
@@ -145,6 +145,43 @@ class SpotifyGateway():
         self.__create_spotify_codes()
 
         return
+    
+    def get_track_metadata(self, song, artist):
+
+        query = f'track:"{song}" artist:"{artist}"'
+
+        results = self.spotify.search(q=query, type="track", limit=5)
+
+        items = results["tracks"]["items"]
+
+        track = self.filter_best_track(items, song, artist)
+
+        if not track:
+            return {}
+
+        return {
+            "name": track["name"],
+            "artist": track["artists"][0]["name"],
+            "release_date": track["album"]["release_date"]
+        }
+    
+    def filter_best_track(self, items, song, artist):
+        song_n = normalize(song)
+        artist_n = normalize(artist)
+
+        for item in items:
+            name = normalize(item["name"])
+            artists = normalize(" ".join([a["name"] for a in item["artists"]]))
+
+            if song_n in name and artist_n in artists:
+
+                # reject bad versions
+                if any(x in name for x in ["remaster", "live", "edit"]):
+                    continue
+
+                return item
+
+        return items[0] if items else None
 
 
 
